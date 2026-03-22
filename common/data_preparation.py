@@ -59,7 +59,10 @@ def get_train_loader(train_extra: Optional[List[A.BasicTransform]] = None,
     mask_paths = sorted(settings.TRAIN_MASK_DIR.glob("*.png"))
     assert len(img_paths) == len(mask_paths), "Число изображений и масок не совпадает"
 
-    transforms = []
+    transforms = [
+        A.RandomRotate90(p=0.5),
+        A.HorizontalFlip(p=0.5),
+    ]
     if train_extra:
         transforms.extend(train_extra)
     transforms.append(ToTensorV2())

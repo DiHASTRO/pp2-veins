@@ -10,7 +10,7 @@ from BASELINE_V3Plus.model import DeepLabV3Plus, train_extra_transforms, val_ext
 ModelClass = DeepLabV3Plus
 
 # --- ПАРАМЕТРЫ ПАЙПЛАЙНА ---
-USE_FITTED = True               # False – обучить, True – загрузить готовую
+USE_FITTED = False               # False – обучить, True – загрузить готовую
 MODEL_SAVE_PATH = ModelClass.get_model_save_path()
 METRICS_SAVE_PATH = ModelClass.get_metrics_save_path()
 

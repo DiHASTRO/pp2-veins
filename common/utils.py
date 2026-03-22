@@ -1,6 +1,5 @@
 import torch
 import numpy as np
-from typing import Dict
 
 def evaluate_metrics(model, loader, device, num_classes):
     """Вычисляет IoU и Dice для каждой маски, возвращает средние."""

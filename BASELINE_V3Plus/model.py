@@ -22,8 +22,6 @@ STD = (0.229, 0.224, 0.225)
 
 # Дополнительные трансформации для этой модели (без ToTensorV2, его добавит data_preparation)
 train_extra_transforms = [
-    A.RandomRotate90(p=0.5),
-    A.HorizontalFlip(p=0.5),
     A.Resize(IMG_SIZE, IMG_SIZE, interpolation=1, mask_interpolation=0),  # 1=LINEAR, 0=NEAREST
     A.Normalize(mean=MEAN, std=STD),
 ]
@@ -57,6 +55,7 @@ class DeepLabV3Plus(BaseModel):
             self.model.train()
             train_loss = 0.0
             for images, masks in train_loader:
+                print(images, masks)
                 images, masks = images.to(settings.DEVICE), masks.to(settings.DEVICE)
                 self.optimizer.zero_grad()
                 outputs = self.model(images)
