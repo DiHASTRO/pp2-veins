@@ -6,8 +6,8 @@ from common.metrics import get_all_metrics
 
 # --- ЗДЕСЬ ВЫБИРАЕМ МОДЕЛЬ ---
 # Импортируем модуль модели и подставляем его в переменную ModelClass
-from BASELINE_V3Plus.model import DeepLabV3Plus, train_extra_transforms, val_extra_transforms
-ModelClass = DeepLabV3Plus
+from CONSISTENT_V3Plus.model import ConsistentDeepLabV3Plus, train_extra_transforms, val_extra_transforms
+ModelClass = ConsistentDeepLabV3Plus
 
 # --- ПАРАМЕТРЫ ПАЙПЛАЙНА ---
 USE_FITTED = False               # False – обучить, True – загрузить готовую
@@ -33,7 +33,7 @@ test_loader = data_prep.get_test_loader(
 model = ModelClass()
 if not USE_FITTED:
     print("Обучение модели...")
-    model.fit(train_loader, save_best=True)
+    model.fit(train_loader, val_loader=train_loader, save_best=True)
     model.save(MODEL_SAVE_PATH)
     print(f"Модель сохранена в {MODEL_SAVE_PATH}")
 else:

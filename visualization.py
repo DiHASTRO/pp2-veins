@@ -3,8 +3,8 @@ import common.settings as settings
 import common.data_preparation as data_prep
 
 # --- ВЫБОР МОДЕЛИ (такой же, как в run_pipeline.py) ---
-from BASELINE_V3Plus.model import DeepLabV3Plus, train_extra_transforms, val_extra_transforms
-ModelClass = DeepLabV3Plus
+from CONSISTENT_V3Plus.model import ConsistentDeepLabV3Plus, train_extra_transforms, val_extra_transforms
+ModelClass = ConsistentDeepLabV3Plus
 
 # --- ПАРАМЕТРЫ ВИЗУАЛИЗАЦИИ ---
 NUM_SAMPLES = 5
@@ -18,7 +18,7 @@ def main():
     )
 
     # Инициализируем модель и загружаем сохранённые веса (если есть)
-    model = ModelClass(num_classes=5, learning_rate=1e-4)
+    model = ModelClass()
     model.load(ModelClass.get_model_save_path())   # предполагается статический метод
     print(f"Модель загружена из {ModelClass.get_model_save_path()}")
 

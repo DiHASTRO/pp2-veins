@@ -51,9 +51,13 @@ def get_all_metrics(preds, targets, num_classes, class_names=None):
     cm = confusion_matrix(targets, preds, labels=list(range(num_classes)))
     macro_dice, macro_iou = compute_macro_dice_iou(cm)
     per_class_metrics = compute_per_class_accuracy_precision_recall(cm, class_names)
+    artery_to_vein = cm[1, 2] / (cm[1, :].sum() + 1e-8)
+    vein_to_artery = cm[2, 1] / (cm[2, :].sum() + 1e-8)
     result = {
         'dice': macro_dice,
         'iou': macro_iou,
+        'artery_to_vein_rate': artery_to_vein,
+        'vein_to_artery_rate': vein_to_artery,
         **per_class_metrics
     }
     return result
