@@ -254,11 +254,11 @@ class ConsistentDeepLabV3Plus(BaseModel):
 
     @staticmethod
     def get_model_save_path() -> pathlib.Path:
-        return pathlib.Path("CONSISTENT_V3Plus/weights.pth")
+        return pathlib.Path("ADVANCED_SEGM_V3Plus/weights.pth")
 
     @staticmethod
     def get_metrics_save_path() -> pathlib.Path:
-        return pathlib.Path("CONSISTENT_V3Plus/metrics.csv")
+        return pathlib.Path("ADVANCED_SEGM_V3Plus/metrics.csv")
 
     def visualize_sample(self, image_tensor, mask_tensor, ax_image, ax_truth, ax_pred):
         img = self._denormalize(image_tensor)

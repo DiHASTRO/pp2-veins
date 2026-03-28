@@ -2,27 +2,22 @@ import matplotlib.pyplot as plt
 import common.settings as settings
 import common.data_preparation as data_prep
 
-# --- ВЫБОР МОДЕЛИ (такой же, как в run_pipeline.py) ---
-from BASELINE_V3Plus.model import DeepLabV3Plus, train_extra_transforms, val_extra_transforms
-ModelClass = DeepLabV3Plus
+from ADVANCED_SEGM_V3Plus.model import ConsistentDeepLabV3Plus, train_extra_transforms, val_extra_transforms
+ModelClass = ConsistentDeepLabV3Plus
 
-# --- ПАРАМЕТРЫ ВИЗУАЛИЗАЦИИ ---
 NUM_SAMPLES = 5
 
 def main():
-    # Загружаем тестовые данные (без аугментаций)
     test_loader = data_prep.get_test_loader(
         extra_transforms=val_extra_transforms,
         batch_size=settings.BATCH_SIZE,
         num_workers=settings.NUM_WORKERS
     )
 
-    # Инициализируем модель и загружаем сохранённые веса (если есть)
-    model = ModelClass(num_classes=5, learning_rate=1e-4)
-    model.load(ModelClass.get_model_save_path())   # предполагается статический метод
+    model = ModelClass()
+    model.load(ModelClass.get_model_save_path())
     print(f"Модель загружена из {ModelClass.get_model_save_path()}")
 
-    # Собираем несколько примеров из test_loader
     vis_images = []
     vis_masks = []
     for batch_idx, (imgs, masks) in enumerate(test_loader):
@@ -34,7 +29,6 @@ def main():
         if len(vis_images) >= NUM_SAMPLES:
             break
 
-    # Создаём сетку подграфиков
     fig, axes = plt.subplots(NUM_SAMPLES, 3, figsize=(15, 5 * NUM_SAMPLES))
     for i in range(NUM_SAMPLES):
         ax_img = axes[i, 0]
