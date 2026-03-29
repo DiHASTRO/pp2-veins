@@ -6,6 +6,7 @@ import torch.nn as nn
 import torch.optim as optim
 import segmentation_models_pytorch as smp
 import albumentations as A
+from tqdm import tqdm
 
 from common.base_model import BaseModel
 from common import settings
@@ -50,41 +51,58 @@ class DeepLabV3Plus(BaseModel):
         best_state = None
         patience_counter = 0
 
-        for epoch in range(EPOCHS_COUNT):
-            # Обучение
+        for epoch in tqdm(range(EPOCHS_COUNT), desc="Training", unit="epoch"):
+
+            # --- ОБУЧЕНИЕ ---
             self.model.train()
             train_loss = 0.0
-            for images, masks in train_loader:
-                print(images, masks)
+
+            train_iter = tqdm(train_loader, desc=f"Epoch {epoch + 1}/{EPOCHS_COUNT} [Train]", leave=False)
+
+            for images, masks in train_iter:
+                # print(images, masks)
                 images, masks = images.to(settings.DEVICE), masks.to(settings.DEVICE)
                 self.optimizer.zero_grad()
                 outputs = self.model(images)
                 loss = self.criterion(outputs, masks)
                 loss.backward()
                 self.optimizer.step()
-                train_loss += loss.item()
+
+                current_loss = loss.item()
+                train_loss += current_loss
+
+                train_iter.set_postfix(loss=f"{current_loss:.4f}")
+
             train_loss /= len(train_loader)
 
-            # Валидация
+            # --- ВАЛИДАЦИЯ ---
             val_loss = None
             if val_loader:
                 self.model.eval()
                 val_loss = 0.0
+
                 with torch.no_grad():
-                    for images, masks in val_loader:
+                    val_iter = tqdm(val_loader, desc=f"Epoch {epoch + 1}/{EPOCHS_COUNT} [Val]  ", leave=False)
+
+                    for images, masks in val_iter:
                         images, masks = images.to(settings.DEVICE), masks.to(settings.DEVICE)
                         outputs = self.model(images)
                         loss = self.criterion(outputs, masks)
-                        val_loss += loss.item()
+
+                        current_loss = loss.item()
+                        val_loss += current_loss
+
+                        val_iter.set_postfix(loss=f"{current_loss:.4f}")
+
                 val_loss /= len(val_loader)
 
-            # Вывод
+            # --- ВЫВОД РЕЗУЛЬТАТОВ ЭПОХИ ---
             if val_loss is not None:
-                print(f"Epoch {epoch+1}/{EPOCHS_COUNT} | Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f}")
+                print(f"\nEpoch {epoch + 1}/{EPOCHS_COUNT} | Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f}")
             else:
-                print(f"Epoch {epoch+1}/{EPOCHS_COUNT} | Train Loss: {train_loss:.4f}")
+                print(f"\nEpoch {epoch + 1}/{EPOCHS_COUNT} | Train Loss: {train_loss:.4f}")
 
-            # Сохранение лучшей модели
+            # --- СОХРАНЕНИЕ И EARLY STOPPING ---
             if save_best and val_loss is not None and val_loss < best_val_loss:
                 best_val_loss = val_loss
                 best_state = {k: v.cpu().clone() for k, v in self.model.state_dict().items()}
@@ -93,7 +111,7 @@ class DeepLabV3Plus(BaseModel):
             elif save_best and val_loss is not None and patience is not None:
                 patience_counter += 1
                 if patience_counter >= patience:
-                    print(f"Early stopping at epoch {epoch+1}")
+                    print(f"Early stopping at epoch {epoch + 1}")
                     break
 
         # Восстановление лучшей модели
