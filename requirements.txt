@@ -6,3 +6,4 @@ scikit-learn
 Pillow
 albumentations
 segmentation-models-pytorch
+tqdm

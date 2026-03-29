@@ -1,20 +1,20 @@
 import pandas as pd
 import torch
+from tqdm import tqdm
 import common.settings as settings
 import common.data_preparation as data_prep
 from common.metrics import get_all_metrics
 
 # --- ЗДЕСЬ ВЫБИРАЕМ МОДЕЛЬ ---
-# Импортируем модуль модели и подставляем его в переменную ModelClass
 from BASELINE_V3Plus.model import DeepLabV3Plus, train_extra_transforms, val_extra_transforms
 ModelClass = DeepLabV3Plus
 
 # --- ПАРАМЕТРЫ ПАЙПЛАЙНА ---
-USE_FITTED = False               # False – обучить, True – загрузить готовую
+USE_FITTED = False
 MODEL_SAVE_PATH = ModelClass.get_model_save_path()
 METRICS_SAVE_PATH = ModelClass.get_metrics_save_path()
 
-VISUALIZE = True  # Показывать ли для визуального сравнения реальные данные и что предсказала модель
+VISUALIZE = True
 
 # --- ЗАГРУЗКА ДАННЫХ ---
 print("Загрузка данных...")
@@ -44,7 +44,9 @@ else:
 print("Выполнение предсказаний...")
 all_preds = []
 all_targets = []
-for images, masks in test_loader:
+
+# Добавили tqdm для отображения прогресса по батчам теста
+for images, masks in tqdm(test_loader, desc="Inference", unit="batch"):
     preds = model.predict(images)  # (B, H, W) long
     all_preds.append(preds.view(-1))
     all_targets.append(masks.view(-1))
