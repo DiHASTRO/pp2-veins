@@ -1,0 +1,2 @@
+dice,iou,background_accuracy,background_precision,background_recall,arteries_accuracy,arteries_precision,arteries_recall,veins_accuracy,veins_precision,veins_recall,crossings_accuracy,crossings_precision,crossings_recall,capillaries_accuracy,capillaries_precision,capillaries_recall
+0.4123506663838671,0.33961772874499485,0.9489727020263653,0.9592643613925147,0.9858683507570977,0.9668350219726544,0.616089354700717,0.41279569526934123,0.9658388137817364,0.6752807489375333,0.5317960429255458,0.998362159729002,0.0,0.0,0.9993507385253887,0.0,0.0
