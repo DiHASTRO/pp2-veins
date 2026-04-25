@@ -1,4 +1,6 @@
+import time
 import torch
+import typing as tp
 import numpy as np
 
 def evaluate_metrics(model, loader, device, num_classes):
@@ -29,3 +31,12 @@ def evaluate_metrics(model, loader, device, num_classes):
         'mean_iou': np.mean(iou_scores),
         'mean_dice': np.mean(dice_scores)
     }
+
+
+def timer(func: tp.Callable):
+    def wrapper(*args, **kwargs):
+        start = time.time()
+        result = func(*args, **kwargs)
+        print(f'Function {func.__name__} had duration: {(time.time() - start):.2f} s')
+        return result
+    return wrapper

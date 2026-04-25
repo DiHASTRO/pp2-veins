@@ -6,11 +6,11 @@ from common.metrics import get_all_metrics
 
 # --- ЗДЕСЬ ВЫБИРАЕМ МОДЕЛЬ ---
 # Импортируем модуль модели и подставляем его в переменную ModelClass
-from BASELINE_V3Plus.model import DeepLabV3Plus, train_extra_transforms, val_extra_transforms
-ModelClass = DeepLabV3Plus
+from UNETPP_VEINS.model import UnetPlusPlus, train_extra_transforms, val_extra_transforms
+ModelClass = UnetPlusPlus
 
 # --- ПАРАМЕТРЫ ПАЙПЛАЙНА ---
-USE_FITTED = False               # False – обучить, True – загрузить готовую
+USE_FITTED = True               # False – обучить, True – загрузить готовую
 MODEL_SAVE_PATH = ModelClass.get_model_save_path()
 METRICS_SAVE_PATH = ModelClass.get_metrics_save_path()
 
