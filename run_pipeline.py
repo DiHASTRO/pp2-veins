@@ -6,11 +6,11 @@ from common import metrics
 
 # --- ЗДЕСЬ ВЫБИРАЕМ МОДЕЛЬ ---
 # Импортируем модуль модели и подставляем его в переменную ModelClass
-from BASELINE_V3Plus.model import DeepLabV3Plus, train_extra_transforms, val_extra_transforms
-ModelClass = DeepLabV3Plus
+from ADVANCED_SEGM_V3Plus.model import ConsistentDeepLabV3Plus, train_extra_transforms, val_extra_transforms
+ModelClass = ConsistentDeepLabV3Plus
 
 # --- ПАРАМЕТРЫ ПАЙПЛАЙНА ---
-USE_FITTED = True               # False – обучить, True – загрузить готовую
+USE_FITTED = False               # False – обучить, True – загрузить готовую
 INTERVAL_METRICS_SAVE_PATH = ModelClass.get_interval_metrics_save_path()
 RAW_METRICS_SAVE_PATH = ModelClass.get_raw_metrics_save_path()
 
