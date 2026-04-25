@@ -1,3 +1,4 @@
+import time
 import numpy as np
 import pathlib
 
@@ -9,6 +10,7 @@ import albumentations as A
 
 from common.base_model import BaseModel
 from common import settings
+from common import utils
 
 # Константы (могут быть изменены)
 NUM_CLASSES = 5
@@ -50,12 +52,13 @@ class DeepLabV3Plus(BaseModel):
         best_state = None
         patience_counter = 0
 
+        start = time.time()
         for epoch in range(EPOCHS_COUNT):
             # Обучение
             self.model.train()
             train_loss = 0.0
             for images, masks in train_loader:
-                print(images, masks)
+                # print(images, masks)
                 images, masks = images.to(settings.DEVICE), masks.to(settings.DEVICE)
                 self.optimizer.zero_grad()
                 outputs = self.model(images)
@@ -82,7 +85,9 @@ class DeepLabV3Plus(BaseModel):
             if val_loss is not None:
                 print(f"Epoch {epoch+1}/{EPOCHS_COUNT} | Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f}")
             else:
-                print(f"Epoch {epoch+1}/{EPOCHS_COUNT} | Train Loss: {train_loss:.4f}")
+                approx_time_left = (time.time() - start) / (epoch + 1) * (EPOCHS_COUNT - epoch - 1)
+                time_left_str = utils.beautify_time_left(approx_time_left)
+                print(f"Epoch {epoch+1}/{EPOCHS_COUNT} | Train Loss: {train_loss:.4f} | Left approx {time_left_str}")
 
             # Сохранение лучшей модели
             if save_best and val_loss is not None and val_loss < best_val_loss:
@@ -128,12 +133,16 @@ class DeepLabV3Plus(BaseModel):
         self.is_fitted = True
 
     @staticmethod
-    def get_model_save_path() -> pathlib.Path:
-        return pathlib.Path("BASELINE_V3Plus/weights.eth")
+    def get_model_save_path(fold_num: int) -> pathlib.Path:
+        return pathlib.Path(f"BASELINE_V3Plus/weights_{fold_num}.eth")
 
     @staticmethod
-    def get_metrics_save_path() -> pathlib.Path:
-        return pathlib.Path("BASELINE_V3Plus/metrics.csv")
+    def get_interval_metrics_save_path() -> pathlib.Path:
+        return pathlib.Path("BASELINE_V3Plus/interval_metrics.csv")
+
+    @staticmethod
+    def get_raw_metrics_save_path() -> pathlib.Path:
+        return pathlib.Path("BASELINE_V3Plus/raw_metrics.csv")
 
     def visualize_sample(self, image_tensor, mask_tensor, ax_image, ax_truth, ax_pred):
         """Отрисовывает оригинал, истинную маску и предсказание на переданные оси."""

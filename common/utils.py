@@ -29,3 +29,7 @@ def evaluate_metrics(model, loader, device, num_classes):
         'mean_iou': np.mean(iou_scores),
         'mean_dice': np.mean(dice_scores)
     }
+
+def beautify_time_left(seconds: float | int):
+    seconds = int(seconds)
+    return f'{seconds // 69}m {seconds % 60}s'

@@ -1,6 +1,8 @@
 import numpy as np
+import pandas as pd
+from scipy import stats
 from sklearn.metrics import confusion_matrix
-from common.settings import CLASS_NAMES
+from common import settings
 
 def compute_macro_dice_iou(cm):
     """Возвращает macro average Dice и IoU по всем классам."""
@@ -47,7 +49,7 @@ def get_all_metrics(preds, targets, num_classes, class_names=None):
     Возвращает словарь с общими метриками (dice, iou) и per‑class метриками.
     """
     if class_names is None:
-        class_names = CLASS_NAMES  # используем глобальные, если не переданы
+        class_names = settings.CLASS_NAMES  # используем глобальные, если не переданы
     cm = confusion_matrix(targets, preds, labels=list(range(num_classes)))
     macro_dice, macro_iou = compute_macro_dice_iou(cm)
     per_class_metrics = compute_per_class_accuracy_precision_recall(cm, class_names)
@@ -57,3 +59,31 @@ def get_all_metrics(preds, targets, num_classes, class_names=None):
         **per_class_metrics
     }
     return result
+
+def get_interval_metrics_from_raw(metrics_df: pd.DataFrame) -> pd.DataFrame:
+    # Уровень доверия
+    confidence_level = 0.95
+    alpha = 1 - confidence_level
+    # Количество наблюдений
+    n = len(metrics_df)
+    # Критическое значение t (для n-1 степеней свободы)
+    t_critical = stats.t.ppf(1 - alpha/2, df=n-1)
+
+    # Список для результатов
+    results = []
+    for column in metrics_df.columns:
+        data = metrics_df[column]
+        mean_val = data.mean()
+        sem = data.sem()  # стандартная ошибка среднего (std / sqrt(n))
+        margin = t_critical * sem
+        lower = mean_val - margin
+        upper = mean_val + margin
+        results.append({
+            'metric_name': column,
+            'lower_bound': lower,
+            'average': mean_val,
+            'upper_bound': upper
+        })
+
+    # Создание DataFrame с результатами
+    return pd.DataFrame(results)

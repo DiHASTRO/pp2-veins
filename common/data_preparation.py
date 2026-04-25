@@ -1,4 +1,5 @@
 import numpy as np
+import typing as tp
 from pathlib import Path
 from typing import Optional, List
 import torch
@@ -48,50 +49,79 @@ class SegmentationDataset(Dataset):
         return image, mask
 
 
+def create_cross_val_loaders(
+    train_extra_transforms: Optional[List[A.BasicTransform]] = None,
+    val_extra_transforms: Optional[List[A.BasicTransform]] = None,
+    batch_size: int = None,
+    num_workers: int = None,
+) -> List[tp.Tuple[DataLoader, DataLoader]]:
+    """
+    Создаёт список пар (train_loader, test_loader) для кросс-валидации.
+    
+    Параметры:
+        train_extra: дополнительные аугментации для тренировочных данных
+        extra_transforms: дополнительные аугментации для тестовых данных
+        batch_size, num_workers: если None, берутся из settings
+        num_folds: количество фолдов (по умолчанию 3)
+        test_size: количество изображений в тестовой выборке на фолд (по умолчанию 20)
+    
+    Возвращает:
+        Список кортежей длины num_folds: [(train_loader, test_loader), ...]
+    """
+    num_folds = settings.FOLDS_NUM
+    test_size = settings.TEST_SIZE
 
-def get_train_loader(train_extra: Optional[List[A.BasicTransform]] = None,
-                     batch_size: int = None,
-                     num_workers: int = None) -> DataLoader:
-    batch_size = batch_size or settings.BATCH_SIZE
-    num_workers = num_workers or settings.NUM_WORKERS
-
-    img_paths = sorted(settings.TRAIN_IMG_DIR.glob("*.png"))
-    mask_paths = sorted(settings.TRAIN_MASK_DIR.glob("*.png"))
-    assert len(img_paths) == len(mask_paths), "Число изображений и масок не совпадает"
-
-    transforms = [
-        A.RandomRotate90(p=0.5),
-        A.HorizontalFlip(p=0.5),
-    ]
-    if train_extra:
-        transforms.extend(train_extra)
-    transforms.append(ToTensorV2())
-
-    transform = A.Compose(transforms)
-    dataset = SegmentationDataset(img_paths, mask_paths, transform=transform)
-
-    loader = DataLoader(dataset, batch_size=batch_size, shuffle=True,
-                        num_workers=num_workers, pin_memory=True)
-    return loader
-
-
-def get_test_loader(extra_transforms: Optional[List[A.BasicTransform]] = None,
-                    batch_size: int = None,
-                    num_workers: int = None) -> DataLoader:
-    batch_size = batch_size or settings.BATCH_SIZE
-    num_workers = num_workers or settings.NUM_WORKERS
-
-    img_paths = sorted(settings.TEST_IMG_DIR.glob("*.png"))
-    mask_paths = sorted(settings.TEST_MASK_DIR.glob("*.png"))
-
-    transforms = []
-    if extra_transforms:
-        transforms.extend(extra_transforms)
-    transforms.append(ToTensorV2())
-
-    transform = A.Compose(transforms)
-    dataset = SegmentationDataset(img_paths, mask_paths, transform=transform)
-
-    loader = DataLoader(dataset, batch_size=batch_size, shuffle=False,
-                        num_workers=num_workers, pin_memory=True)
-    return loader
+    # Загрузка всех путей из общих директорий
+    all_img_paths = sorted(settings.DATASET_IMG_DIR.glob("*.png"))
+    all_mask_paths = sorted(settings.DATASET_MASK_DIR.glob("*.png"))
+    assert len(all_img_paths) == len(all_mask_paths), "Число изображений и масок не совпадает"
+    total = len(all_img_paths)
+    
+    if total < num_folds * test_size:
+        raise ValueError(f"Всего {total} изображений, требуется {num_folds * test_size} для {num_folds} фолдов по {test_size}")
+    
+    # Параметры загрузки
+    bs = batch_size or settings.BATCH_SIZE
+    nw = num_workers or settings.NUM_WORKERS
+    
+    # Вспомогательная функция для создания train loader (аналогична get_train_loader)
+    def make_train_loader(img_paths, mask_paths):
+        transforms = [
+            A.RandomRotate90(p=0.5),
+            A.HorizontalFlip(p=0.5),
+        ]
+        if train_extra_transforms:
+            transforms.extend(train_extra_transforms)
+        transforms.append(ToTensorV2())
+        transform = A.Compose(transforms)
+        dataset = SegmentationDataset(img_paths, mask_paths, transform=transform)
+        return DataLoader(dataset, batch_size=bs, shuffle=True,
+                          num_workers=nw, pin_memory=True)
+    
+    # Вспомогательная функция для создания test loader (аналогична get_test_loader)
+    def make_test_loader(img_paths, mask_paths):
+        transforms = []
+        if val_extra_transforms:
+            transforms.extend(val_extra_transforms)
+        transforms.append(ToTensorV2())
+        transform = A.Compose(transforms)
+        dataset = SegmentationDataset(img_paths, mask_paths, transform=transform)
+        return DataLoader(dataset, batch_size=bs, shuffle=False,
+                          num_workers=nw, pin_memory=True)
+    
+    result = []
+    for fold in range(num_folds):
+        start = fold * test_size
+        end = start + test_size
+        
+        test_imgs = all_img_paths[start:end]
+        test_masks = all_mask_paths[start:end]
+        
+        train_imgs = all_img_paths[:start] + all_img_paths[end:]
+        train_masks = all_mask_paths[:start] + all_mask_paths[end:]
+        
+        train_loader = make_train_loader(train_imgs, train_masks)
+        test_loader = make_test_loader(test_imgs, test_masks)
+        result.append((train_loader, test_loader))
+    
+    return result

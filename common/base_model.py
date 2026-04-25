@@ -38,12 +38,18 @@ class BaseModel(abc.ABC):
 
     @staticmethod
     @abc.abstractmethod
-    def get_model_save_path() -> pathlib.Path:
+    def get_model_save_path(fold_num: int) -> pathlib.Path:
         """Где сохраняется обученная модель"""
         pass
 
     @staticmethod
     @abc.abstractmethod
-    def get_metrics_save_path() -> pathlib.Path:
-        """Куда сохранятся метрики"""
+    def get_interval_metrics_save_path() -> pathlib.Path:
+        """Куда сохранятся интервальные оценки метрик"""
+        pass
+
+    @staticmethod
+    @abc.abstractmethod
+    def get_raw_metrics_save_path() -> pathlib.Path:
+        """Куда сохранятся сырые метрики"""
         pass

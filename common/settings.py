@@ -4,10 +4,18 @@ from pathlib import Path
 # Пути
 BASE_DIR = Path(__file__).parent.parent
 DATASET_DIR = BASE_DIR / "dataset"
-TRAIN_IMG_DIR = DATASET_DIR / "train" / "images"
-TRAIN_MASK_DIR = DATASET_DIR / "train" / "masks"
-TEST_IMG_DIR = DATASET_DIR / "test" / "images"
-TEST_MASK_DIR = DATASET_DIR / "test" / "masks"
+# TRAIN_IMG_DIR = DATASET_DIR / "train" / "images"
+# TRAIN_MASK_DIR = DATASET_DIR / "train" / "masks"
+# TEST_IMG_DIR = DATASET_DIR / "test" / "images"
+# TEST_MASK_DIR = DATASET_DIR / "test" / "masks"
+DATASET_IMG_DIR = DATASET_DIR / "images"
+DATASET_MASK_DIR = DATASET_DIR / "masks"
+
+FOLDS_NUM = 3
+TEST_SIZE = 20
+
+CONFIDENCE_LEVEL = 0.95
+
 
 # Общие параметры
 NUM_CLASSES = 5
