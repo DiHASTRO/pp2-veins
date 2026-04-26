@@ -4,6 +4,7 @@ from scipy import stats
 from sklearn.metrics import confusion_matrix
 from common import settings
 
+
 def compute_macro_dice_iou(cm):
     """Возвращает macro average Dice и IoU по всем классам."""
     num_classes = cm.shape[0]
@@ -17,14 +18,13 @@ def compute_macro_dice_iou(cm):
         iou = tp / (tp + fp + fn + 1e-8)
         dice_per_class.append(dice)
         iou_per_class.append(iou)
-    macro_dice = np.mean(dice_per_class)
-    macro_iou = np.mean(iou_per_class)
-    return macro_dice, macro_iou
+    return np.mean(dice_per_class), np.mean(iou_per_class)
+
 
 def compute_per_class_accuracy_precision_recall(cm, class_names):
     """
-    Возвращает словарь с per‑class accuracy, precision, recall.
-    Ключи: f'{class_name}_accuracy', f'{class_name}_precision', f'{class_name}_recall'
+    Возвращает per-class accuracy, precision, recall.
+    Ключи: f'{class_name}_accuracy', f'{class_name}_precision', f'{class_name}_recall'.
     """
     num_classes = cm.shape[0]
     result = {}
@@ -44,46 +44,48 @@ def compute_per_class_accuracy_precision_recall(cm, class_names):
         result[f'{class_name}_recall'] = recall
     return result
 
+
 def get_all_metrics(preds, targets, num_classes, class_names=None):
     """
-    Возвращает словарь с общими метриками (dice, iou) и per‑class метриками.
+    Возвращает общие метрики, per-class метрики и специальные artery/vein error rates.
+    Error rates нужны для проверки гипотезы про снижение путаницы artery <-> vein.
     """
     if class_names is None:
-        class_names = settings.CLASS_NAMES  # используем глобальные, если не переданы
+        class_names = settings.CLASS_NAMES
+
     cm = confusion_matrix(targets, preds, labels=list(range(num_classes)))
     macro_dice, macro_iou = compute_macro_dice_iou(cm)
     per_class_metrics = compute_per_class_accuracy_precision_recall(cm, class_names)
-    result = {
+
+    artery_to_vein = cm[1, 2] / (cm[1, :].sum() + 1e-8)
+    vein_to_artery = cm[2, 1] / (cm[2, :].sum() + 1e-8)
+
+    return {
         'dice': macro_dice,
         'iou': macro_iou,
-        **per_class_metrics
+        'artery_to_vein_rate': artery_to_vein,
+        'vein_to_artery_rate': vein_to_artery,
+        **per_class_metrics,
     }
-    return result
+
 
 def get_interval_metrics_from_raw(metrics_df: pd.DataFrame) -> pd.DataFrame:
-    # Уровень доверия
-    confidence_level = 0.95
+    confidence_level = getattr(settings, 'CONFIDENCE_LEVEL', 0.95)
     alpha = 1 - confidence_level
-    # Количество наблюдений
     n = len(metrics_df)
-    # Критическое значение t (для n-1 степеней свободы)
-    t_critical = stats.t.ppf(1 - alpha/2, df=n-1)
+    t_critical = stats.t.ppf(1 - alpha / 2, df=n - 1)
 
-    # Список для результатов
     results = []
     for column in metrics_df.columns:
         data = metrics_df[column]
         mean_val = data.mean()
-        sem = data.sem()  # стандартная ошибка среднего (std / sqrt(n))
+        sem = data.sem()
         margin = t_critical * sem
-        lower = mean_val - margin
-        upper = mean_val + margin
         results.append({
             'metric_name': column,
-            'lower_bound': lower,
+            'lower_bound': mean_val - margin,
             'average': mean_val,
-            'upper_bound': upper
+            'upper_bound': mean_val + margin,
         })
 
-    # Создание DataFrame с результатами
     return pd.DataFrame(results)
