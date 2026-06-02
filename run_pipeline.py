@@ -6,8 +6,8 @@ from common.metrics import get_all_metrics
 
 # --- ЗДЕСЬ ВЫБИРАЕМ МОДЕЛЬ ---
 # Импортируем модуль модели и подставляем его в переменную ModelClass
-from BASELINE_V3Plus.model import DeepLabV3Plus, train_extra_transforms, val_extra_transforms
-ModelClass = DeepLabV3Plus
+from TFFM.model import TFFMModel, train_extra_transforms, val_extra_transforms
+ModelClass = TFFMModel
 
 # --- ПАРАМЕТРЫ ПАЙПЛАЙНА ---
 USE_FITTED = False               # False – обучить, True – загрузить готовую

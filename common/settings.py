@@ -13,7 +13,7 @@ TEST_MASK_DIR = DATASET_DIR / "test" / "masks"
 NUM_CLASSES = 5
 N_FOLDS = 5
 SEED = 42
-BATCH_SIZE = 8
+BATCH_SIZE = 2
 NUM_WORKERS = 0   # для Windows
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
