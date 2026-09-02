@@ -74,6 +74,9 @@ def create_cross_val_loaders(
     # Загрузка всех путей из общих директорий
     all_img_paths = sorted(settings.DATASET_IMG_DIR.glob("*.png"))
     all_mask_paths = sorted(settings.DATASET_MASK_DIR.glob("*.png"))
+
+    all_img_paths, all_mask_paths = _shuffle_both_equally(all_img_paths, all_mask_paths)
+
     assert len(all_img_paths) == len(all_mask_paths), "Число изображений и масок не совпадает"
     total = len(all_img_paths)
     
@@ -125,3 +128,19 @@ def create_cross_val_loaders(
         result.append((train_loader, test_loader))
     
     return result
+
+
+def _shuffle_both_equally(l1: tp.List, l2: tp.List) -> tp.Tuple[tp.List, tp.List]:
+    assert len(l1) == len(l2)
+
+    np.random.seed(settings.SEED)
+    length = len(l1)
+    indexes = np.random.randint(0, length, length)
+
+    new_l1 = []
+    new_l2 = []
+    for i in indexes:
+        new_l1.append(l1[i])
+        new_l2.append(l2[i])
+
+    return new_l1, new_l2

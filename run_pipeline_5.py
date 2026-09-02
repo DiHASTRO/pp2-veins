@@ -28,6 +28,8 @@ models = [ModelClass() for _ in range(settings.FOLDS_NUM)]
 if not USE_FITTED:
     print("Обучение модели...")
     for i, (model, (train_loader, val_loader)) in enumerate(zip(models, loaders), start=1):
+        if i == 1:
+            continue
         print(f'Бакет {i}...')
         model.fit(train_loader, save_best=True)
 

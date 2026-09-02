@@ -27,15 +27,13 @@ def main():
     vis_masks = []
     for batch_idx, (imgs, masks) in enumerate(test_loader):
         for i in range(len(imgs)):
-            if len(vis_images) >= 100:
+            if len(vis_images) >= NUM_SAMPLES:
                 break
             vis_images.append(imgs[i])
             vis_masks.append(masks[i])
-        if len(vis_images) >= 100:
+        if len(vis_images) >= NUM_SAMPLES:
             break
 
-
-    model.visualize_sample(vis_images[10], vis_masks[10], None, None, None)
     # Создаём сетку подграфиков
     fig, axes = plt.subplots(NUM_SAMPLES, 3, figsize=(15, 5 * NUM_SAMPLES))
     for i in range(NUM_SAMPLES):

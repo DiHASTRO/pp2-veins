@@ -5,12 +5,12 @@ import pathlib
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import segmentation_models_pytorch as smp
 import albumentations as A
 
 from common.base_model import BaseModel
 from common import settings
 from common import utils
+from TFFM.tffm_model import TFFMSegmentationModel, ModelConfig
 
 # Константы (могут быть изменены)
 NUM_CLASSES = 5
@@ -34,33 +34,16 @@ val_extra_transforms = [
 ]
 
 
-class CombinedLoss(nn.Module):
-    """Focal + Dice: без CrossEntropyLoss, с упором на редкие и трудные классы."""
-
-    def __init__(self, focal_weight: float = 0.7, dice_weight: float = 0.3):
-        super().__init__()
-        self.focal = smp.losses.FocalLoss(mode="multiclass", gamma=2.0)
-        self.dice = smp.losses.DiceLoss(mode="multiclass", from_logits=True)
-        self.focal_weight = focal_weight
-        self.dice_weight = dice_weight
-
-    def forward(self, logits: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-        focal_loss = self.focal(logits, target)
-        dice_loss = self.dice(logits, target)
-        return self.focal_weight * focal_loss + self.dice_weight * dice_loss
-
-
-class DeepLabV3Plus(BaseModel):
+class TFFMModel(BaseModel):
     def __init__(self):
         super().__init__()
-        self.model = smp.DeepLabV3Plus(
-            encoder_name="resnet50",
-            encoder_weights="imagenet",
-            in_channels=3,
-            classes=settings.NUM_CLASSES,
+        self.config = ModelConfig(num_classes=settings.NUM_CLASSES)
+        self.model = TFFMSegmentationModel(
+            config=self.config,
+            num_classes=settings.NUM_CLASSES,
         ).to(settings.DEVICE)
         self.optimizer = optim.Adam(self.model.parameters(), lr=LEARNING_RATE)
-        self.criterion = CombinedLoss()
+        self.criterion = nn.CrossEntropyLoss()
         self.LEARNING_RATE = LEARNING_RATE
 
     def fit(self, train_loader, val_loader=None, save_best=True, patience=None, **kwargs):
@@ -74,7 +57,6 @@ class DeepLabV3Plus(BaseModel):
             self.model.train()
             train_loss = 0.0
             for images, masks in train_loader:
-                # print(images, masks)
                 images, masks = images.to(settings.DEVICE), masks.to(settings.DEVICE)
                 self.optimizer.zero_grad()
                 outputs = self.model(images)
@@ -150,18 +132,15 @@ class DeepLabV3Plus(BaseModel):
 
     @staticmethod
     def get_model_save_path(fold_num: int) -> pathlib.Path:
-        # return pathlib.Path(f"BASELINE_V3Plus/weights_{fold_num}.eth")
-        return pathlib.Path(f"IMPROVED_ARTEM_UNETPP/weights_{fold_num}.eth")
+        return pathlib.Path(f"TFFM/weights_{fold_num}.eth")
 
     @staticmethod
     def get_interval_metrics_save_path() -> pathlib.Path:
-        # return pathlib.Path("BASELINE_V3Plus/interval_metrics.csv")
-        return pathlib.Path("IMPROVED_ARTEM_UNETPP/interval_metrics.csv")
+        return pathlib.Path("TFFM/interval_metrics.csv")
 
     @staticmethod
     def get_raw_metrics_save_path() -> pathlib.Path:
-        # return pathlib.Path("BASELINE_V3Plus/raw_metrics.csv")
-        return pathlib.Path("IMPROVED_ARTEM_UNETPP/raw_metrics.csv")
+        return pathlib.Path("TFFM/raw_metrics.csv")
 
     def visualize_sample(self, image_tensor, mask_tensor, ax_image, ax_truth, ax_pred):
         """Отрисовывает оригинал, истинную маску и предсказание на переданные оси."""
@@ -173,12 +152,6 @@ class DeepLabV3Plus(BaseModel):
         with torch.no_grad():
             pred = self.predict(image_tensor.unsqueeze(0)).squeeze(0).cpu()
         pred_rgb = self._mask_to_rgb(pred)
-
-        from PIL import Image
-        # Image.fromarray(img).save('Source.jpg')
-        Image.fromarray(pred_rgb).save('DL-DF_3.jpg')
-        Image.fromarray(true_rgb).save('True_3.jpg')
-        exit()
 
         ax_image.imshow(img)
         ax_image.axis('off')

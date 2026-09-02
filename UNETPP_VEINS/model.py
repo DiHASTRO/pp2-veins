@@ -1,4 +1,7 @@
+import datetime as dt
 import time
+import typing as tp
+
 import numpy as np
 import pathlib
 
@@ -8,15 +11,17 @@ import torch.optim as optim
 import segmentation_models_pytorch as smp
 import albumentations as A
 
-from common.base_model import BaseModel
 from common import settings
 from common import utils
+from common.base_model import BaseModel
+
 
 # Константы (могут быть изменены)
 NUM_CLASSES = 5
-IMG_SIZE = 512
+IMG_SIZE = 256
 EPOCHS_COUNT = 50
 LEARNING_RATE = 1e-4
+WEIGHT_DECAY = 1e-5
 
 # Константы для модели
 MEAN = (0.485, 0.456, 0.406)
@@ -24,43 +29,32 @@ STD = (0.229, 0.224, 0.225)
 
 # Дополнительные трансформации для этой модели (без ToTensorV2, его добавит data_preparation)
 train_extra_transforms = [
+    # A.ToFloat(max_value=255.0),
+    # A.Lambda(image=lambda img, **kwargs: img[:, :, 1:2]),
+
+    # A.CLAHE(p=1.0),
+
     A.Resize(IMG_SIZE, IMG_SIZE, interpolation=1, mask_interpolation=0),  # 1=LINEAR, 0=NEAREST
     A.Normalize(mean=MEAN, std=STD),
 ]
 
 val_extra_transforms = [
-    A.Resize(IMG_SIZE, IMG_SIZE, interpolation=1, mask_interpolation=0),
+    # A.ToFloat(max_value=255.0),
+    # A.Lambda(image=lambda img, **kwargs: img[:, :, 1:2]),
+
+    # A.CLAHE(p=1.0),
+
+    A.Resize(IMG_SIZE, IMG_SIZE, interpolation=1, mask_interpolation=0),  # 1=LINEAR, 0=NEAREST
     A.Normalize(mean=MEAN, std=STD),
 ]
 
 
-class CombinedLoss(nn.Module):
-    """Focal + Dice: без CrossEntropyLoss, с упором на редкие и трудные классы."""
-
-    def __init__(self, focal_weight: float = 0.7, dice_weight: float = 0.3):
-        super().__init__()
-        self.focal = smp.losses.FocalLoss(mode="multiclass", gamma=2.0)
-        self.dice = smp.losses.DiceLoss(mode="multiclass", from_logits=True)
-        self.focal_weight = focal_weight
-        self.dice_weight = dice_weight
-
-    def forward(self, logits: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-        focal_loss = self.focal(logits, target)
-        dice_loss = self.dice(logits, target)
-        return self.focal_weight * focal_loss + self.dice_weight * dice_loss
-
-
-class DeepLabV3Plus(BaseModel):
+class UnetPlusPlus(BaseModel):
     def __init__(self):
         super().__init__()
-        self.model = smp.DeepLabV3Plus(
-            encoder_name="resnet50",
-            encoder_weights="imagenet",
-            in_channels=3,
-            classes=settings.NUM_CLASSES,
-        ).to(settings.DEVICE)
-        self.optimizer = optim.Adam(self.model.parameters(), lr=LEARNING_RATE)
-        self.criterion = CombinedLoss()
+        self.model = smp.UnetPlusPlus(in_channels=3).to(settings.DEVICE)
+        self.optimizer = optim.AdamW(self.model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
+        self.criterion = smp.losses.DiceLoss(mode='binary')
         self.LEARNING_RATE = LEARNING_RATE
 
     def fit(self, train_loader, val_loader=None, save_best=True, patience=None, **kwargs):
@@ -68,15 +62,40 @@ class DeepLabV3Plus(BaseModel):
         best_state = None
         patience_counter = 0
 
-        start = time.time()
-        for epoch in range(EPOCHS_COUNT):
+        avg_sec_per_epoch = 0
+        for epoch_i in range(1, EPOCHS_COUNT + 1):
+            epoch_start = time.time()
+
             # Обучение
             self.model.train()
             train_loss = 0.0
             for images, masks in train_loader:
-                # print(images, masks)
+                masks: torch.Tensor
+                masks = self._get_mask_only_for([2, 3], masks)
+                # print(f'Masks shape: {masks.shape}')
+                # image: torch.Tensor = images[0].permute(1, 2, 0).cpu().numpy()
+                # print(f'Image shape: {image.shape}')
+                # mask: torch.Tensor = masks[0]
+
+                # print(f'Mask shape: {mask.shape}')
+                # from PIL import Image
+                # Image.fromarray(np.array(mask).astype('uint8') * 255, mode='L').show()
+
+                # total_img = []
+                # for row in image:
+                #     # print(row.shape)
+                #     new_row = []
+                #     for pixel in row:
+                #         new_row.append(pixel)
+                #     total_img.append(new_row)
+                # from PIL import Image
+                # Image.fromarray(((np.array(total_img) * STD + MEAN) * 255).astype('uint8'), mode='RGB').show()
+
+                # exit()
                 images, masks = images.to(settings.DEVICE), masks.to(settings.DEVICE)
                 self.optimizer.zero_grad()
+
+                masks = masks.unsqueeze(1)
                 outputs = self.model(images)
                 loss = self.criterion(outputs, masks)
                 loss.backward()
@@ -99,11 +118,24 @@ class DeepLabV3Plus(BaseModel):
 
             # Вывод
             if val_loss is not None:
-                print(f"Epoch {epoch+1}/{EPOCHS_COUNT} | Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f}")
+                print(f"Epoch {epoch_i}/{EPOCHS_COUNT} | Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f}")
             else:
-                approx_time_left = (time.time() - start) / (epoch + 1) * (EPOCHS_COUNT - epoch - 1)
-                time_left_str = utils.beautify_time_left(approx_time_left)
-                print(f"Epoch {epoch+1}/{EPOCHS_COUNT} | Train Loss: {train_loss:.4f} | Left approx {time_left_str}")
+                epoch_time_spent = time.time() - epoch_start
+
+                if avg_sec_per_epoch == 0:
+                    avg_sec_per_epoch = epoch_time_spent
+                else:
+                    avg_sec_per_epoch = (avg_sec_per_epoch * (epoch_i - 1) + epoch_time_spent) / epoch_i
+
+                now = dt.datetime.now()
+                sec_left = (avg_sec_per_epoch * (EPOCHS_COUNT - epoch_i))
+                print(
+                    (
+                        f"Epoch {epoch_i}/{EPOCHS_COUNT} | Train Loss: {train_loss:.4f} "
+                        f"| spent {epoch_time_spent:.2f} s | left approx in {sec_left:.2f} s "
+                        f"| ends approx: {(now + dt.timedelta(seconds=sec_left)).time()}"
+                    ),
+                )
 
             # Сохранение лучшей модели
             if save_best and val_loss is not None and val_loss < best_val_loss:
@@ -114,7 +146,7 @@ class DeepLabV3Plus(BaseModel):
             elif save_best and val_loss is not None and patience is not None:
                 patience_counter += 1
                 if patience_counter >= patience:
-                    print(f"Early stopping at epoch {epoch+1}")
+                    print(f"Early stopping at epoch {epoch_i}")
                     break
 
         # Восстановление лучшей модели
@@ -129,7 +161,7 @@ class DeepLabV3Plus(BaseModel):
         with torch.no_grad():
             images = images.to(settings.DEVICE)
             outputs = self.model(images)
-            preds = torch.argmax(outputs, dim=1)
+            preds = (outputs.squeeze() >= 0).to(torch.float32) * 2
         return preds.cpu()
 
     def save(self, path):
@@ -150,18 +182,15 @@ class DeepLabV3Plus(BaseModel):
 
     @staticmethod
     def get_model_save_path(fold_num: int) -> pathlib.Path:
-        # return pathlib.Path(f"BASELINE_V3Plus/weights_{fold_num}.eth")
-        return pathlib.Path(f"IMPROVED_ARTEM_UNETPP/weights_{fold_num}.eth")
+        return pathlib.Path(f"UNETPP_VEINS/weights_{fold_num}.eth")
 
     @staticmethod
     def get_interval_metrics_save_path() -> pathlib.Path:
-        # return pathlib.Path("BASELINE_V3Plus/interval_metrics.csv")
-        return pathlib.Path("IMPROVED_ARTEM_UNETPP/interval_metrics.csv")
+        return pathlib.Path("UNETPP_VEINS/interval_metrics.csv")
 
     @staticmethod
     def get_raw_metrics_save_path() -> pathlib.Path:
-        # return pathlib.Path("BASELINE_V3Plus/raw_metrics.csv")
-        return pathlib.Path("IMPROVED_ARTEM_UNETPP/raw_metrics.csv")
+        return pathlib.Path("UNETPP_VEINS/raw_metrics.csv")
 
     def visualize_sample(self, image_tensor, mask_tensor, ax_image, ax_truth, ax_pred):
         """Отрисовывает оригинал, истинную маску и предсказание на переданные оси."""
@@ -172,13 +201,8 @@ class DeepLabV3Plus(BaseModel):
         # Предсказание
         with torch.no_grad():
             pred = self.predict(image_tensor.unsqueeze(0)).squeeze(0).cpu()
+        
         pred_rgb = self._mask_to_rgb(pred)
-
-        from PIL import Image
-        # Image.fromarray(img).save('Source.jpg')
-        Image.fromarray(pred_rgb).save('DL-DF_3.jpg')
-        Image.fromarray(true_rgb).save('True_3.jpg')
-        exit()
 
         ax_image.imshow(img)
         ax_image.axis('off')
@@ -198,9 +222,28 @@ class DeepLabV3Plus(BaseModel):
 
     def _mask_to_rgb(self, mask_tensor):
         """Преобразует маску (H,W) с индексами классов в RGB (H,W,3) uint8."""
+        print(f'MASK SHAPE: {mask_tensor.shape}')
         mask = mask_tensor.cpu().numpy().astype(np.uint8)
         h, w = mask.shape
         rgb = np.zeros((h, w, 3), dtype=np.uint8)
         for cls, color in settings.COLOR_MAP.items():
             rgb[mask == cls] = color
         return rgb
+
+#    @utils.timer
+    def _get_mask_only_for(self, class_nums: tp.List[int], masks: torch.Tensor):
+        '''
+        Technically masks: torch.Tensor[torch.Tensor[torch.Tensor[torch.Tensor[float]]]]
+        '''
+        if set(class_nums) - set(settings.CLASS_NAMES):
+            raise ValueError(f'Classes {class_nums} has values that are not present in settings.CLASS_NAMES')
+
+        class_masks = []
+        for class_num in class_nums:
+            class_masks.append(masks == class_num)
+
+        res_mask = class_masks[0]
+        for class_mask in class_masks[1:]:
+            res_mask |= class_mask
+
+        return res_mask.float()
