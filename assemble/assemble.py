@@ -32,8 +32,8 @@ TRAIN_IMAGES_GROUPS = 10
 # --- ПАРАМЕТРЫ ПАЙПЛАЙНА ---
 USE_FITTED = True               # False – обучить, True – загрузить готовую
 USE_WEIGHTED = True
-INTERVAL_METRICS_SAVE_PATH = 'assemble/interval_{i}.csv'
-RAW_METRICS_SAVE_PATH = 'assemble/raw_{i}.csv'
+INTERVAL_METRICS_SAVE_PATH = 'assemble_new/interval_{i}.csv'
+RAW_METRICS_SAVE_PATH = 'assemble_new/raw_{i}.csv'
 
 VISUALIZE = True  # Показывать ли для визуального сравнения реальные данные и что предсказала модель
 
