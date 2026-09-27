@@ -160,6 +160,10 @@ class TFFMModel(BaseModel):
         ax_pred.imshow(pred_rgb)
         ax_pred.axis('off')
 
+    @staticmethod
+    def get_model_name():
+        return 'TFFM-CE'
+
     def _denormalize(self, img_tensor):
         """Преобразует нормализованный тензор (C,H,W) в numpy (H,W,3) в диапазоне [0,1]."""
         img = img_tensor.cpu().numpy().transpose(1, 2, 0)  # (H,W,C)

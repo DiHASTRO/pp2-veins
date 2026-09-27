@@ -190,6 +190,10 @@ class UNetPlusPlusEffB3(BaseModel):
     def get_raw_metrics_save_path() -> pathlib.Path:
         return pathlib.Path("UNETPP_EFFB3/raw_metrics.csv")
 
+    @staticmethod
+    def get_model_name():
+        return 'UN-WCD'
+
     def visualize_sample(self, image_tensor, mask_tensor, ax_image, ax_truth, ax_pred):
         img = self._denormalize(image_tensor)
         true_rgb = self._mask_to_rgb(mask_tensor)

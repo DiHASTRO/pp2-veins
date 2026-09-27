@@ -53,3 +53,9 @@ class BaseModel(abc.ABC):
     def get_raw_metrics_save_path() -> pathlib.Path:
         """Куда сохранятся сырые метрики"""
         pass
+
+    @staticmethod
+    @abc.abstractmethod
+    def get_model_name() -> str:
+        """Название модели"""
+        pass

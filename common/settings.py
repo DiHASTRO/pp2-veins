@@ -23,7 +23,7 @@ CONFIDENCE_LEVEL = 0.95
 NUM_CLASSES = 5
 N_FOLDS = 5
 SEED = 42
-BATCH_SIZE = 2
+BATCH_SIZE = 8
 NUM_WORKERS = 0   # для Windows
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
