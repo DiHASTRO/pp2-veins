@@ -13,8 +13,8 @@ from common import metrics
 
 
 # --- ВЫБОР МОДЕЛИ: замени на свою, как в основном пайплайне ---
-from UNETPP_EFFB3.model import UNetPlusPlusEffB3, val_extra_transforms
-ModelClass = UNetPlusPlusEffB3
+from UNETPP_WCT.model import UNetPPWCT, val_extra_transforms
+ModelClass = UNetPPWCT
 
 
 # --- ПУТИ ---

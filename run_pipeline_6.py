@@ -6,8 +6,8 @@ from common import metrics
 
 # --- ЗДЕСЬ ВЫБИРАЕМ МОДЕЛЬ ---
 # Импортируем модуль модели и подставляем его в переменную ModelClass
-from UNETPP_EFFB3.model import UNetPlusPlusEffB3, train_extra_transforms, val_extra_transforms
-ModelClass = UNetPlusPlusEffB3
+from UNETPP_WCT.model import UNetPPWCT, train_extra_transforms, val_extra_transforms
+ModelClass = UNetPPWCT
 
 # --- ПАРАМЕТРЫ ПАЙПЛАЙНА ---
 USE_FITTED = False               # False – обучить, True – загрузить готовую
