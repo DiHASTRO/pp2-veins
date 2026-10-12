@@ -1,0 +1,12 @@
+# Versions verified for this model with Python 3.12.10.
+# Install torch/torchvision from the desired CPU or CUDA index first (README.md).
+torch==2.7.1
+torchvision==0.22.1
+segmentation-models-pytorch==0.5.0
+albumentations==2.0.8
+numpy==2.5.2
+pandas==3.0.6
+scikit-learn==1.9.1
+Pillow==12.3.0
+matplotlib==3.11.2
+scipy==1.18.1
