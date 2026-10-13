@@ -6,8 +6,8 @@ from common import metrics
 
 # --- ЗДЕСЬ ВЫБИРАЕМ МОДЕЛЬ ---
 # Импортируем модуль модели и подставляем его в переменную ModelClass
-from UNETPP_EFFB3_RIVER.model import UNetPlusPlusEffB3River, train_extra_transforms, val_extra_transforms
-ModelClass = UNetPlusPlusEffB3River
+from UNETPP_EFFB3_BINARY.model import UNetPlusPlusEffB3ArteriesCrossings, train_extra_transforms, val_extra_transforms
+ModelClass = UNetPlusPlusEffB3ArteriesCrossings
 
 # --- ПАРАМЕТРЫ ПАЙПЛАЙНА ---
 USE_FITTED = False               # False – обучить, True – загрузить готовую
@@ -51,14 +51,14 @@ for i, (model, test_loader) in enumerate(zip(models, [loader[1] for loader in lo
     for images, masks in test_loader:
         preds = model.predict(images)  # (B, H, W) long
         all_preds.append(preds.view(-1))
-        all_targets.append(masks.view(-1))
+        all_targets.append(model.targets_for_metrics(masks).view(-1))
 
     all_preds = torch.cat(all_preds).numpy()
     all_targets = torch.cat(all_targets).numpy()
 
     raw_metrics.append(metrics.get_all_metrics(all_preds, all_targets, num_classes=5))
 
-raw_df = pd.DataFrame(raw_metrics)
+raw_df = pd.DataFrame(raw_metrics).filter(regex=rf"^{ModelClass.TARGET_NAME}_")
 raw_df.to_csv(RAW_METRICS_SAVE_PATH, index=False)
 
 interval_df = metrics.get_interval_metrics_from_raw(raw_df)
