@@ -10,7 +10,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from common import settings
+from common import settings_patches_overlap as settings
 from common.base_model import BaseModel
 from common import utils
 
@@ -191,19 +191,19 @@ class ImprovedUNetPlusPlus(BaseModel):
 
     @staticmethod
     def get_model_save_path(fold_num: int) -> pathlib.Path:
-        return pathlib.Path(f"UNETPP_WCD/weights_{fold_num}_cut.pth")
+        return pathlib.Path(f"UNETPP_WCD/weights_{fold_num}_patches_overlap.pth")
 
     @staticmethod
     def get_interval_metrics_save_path() -> pathlib.Path:
-        return pathlib.Path("UNETPP_WCD/interval_metrics_cut.csv")
+        return pathlib.Path("UNETPP_WCD/interval_metrics_patches_overlap.csv")
 
     @staticmethod
     def get_raw_metrics_save_path() -> pathlib.Path:
-        return pathlib.Path("UNETPP_WCD/raw_metrics_cut.csv")
+        return pathlib.Path("UNETPP_WCD/raw_metrics_patches_overlap.csv")
 
     @staticmethod
     def get_model_name():
-        return 'UNET-WCD-cut'
+        return 'UNET-WCD-patches-overlap'
 
     def visualize_sample(self, image_tensor, mask_tensor, ax_image, ax_truth, ax_pred):
         img = self._denormalize(image_tensor)
